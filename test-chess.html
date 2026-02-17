@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Move Test - Isolated</title>
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            font-family: monospace;
+            padding: 20px;
+        }
+
+        #board {
+            max-width: 500px;
+            margin: 20px auto;
+        }
+
+        #log {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .success {
+            color: #22c55e;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .info {
+            color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Chess Move Test - v8.0</h1>
+    <p>Test if pieces stay in place after moving...</p>
+
+    <div id="board"></div>
+
+    <div id="log">
+        <div class="info">🔄 Loading chess board...</div>
+    </div>
+
+    <script type="module">
+        import { Chessboard } from 'https://cdn.jsdelivr.net/npm/react-chessboard@4.7.1/+esm';
+        import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm';
+        import React from 'https://esm.sh/react@18.2.0';
+        import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
+
+        const log = (msg, type = 'info') => {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        };
+
+        const TestChess = () => {
+            const [position, setPosition] = React.useState('start');
+            const gameRef = React.useRef(new Chess());
+
+            React.useEffect(() => {
+                log('✅ Chess board initialized', 'success');
+            }, []);
+
+            const onDrop = React.useCallback((sourceSquare, targetSquare) => {
+                log(`🎯 Attempting move: ${sourceSquare} → ${targetSquare}`, 'info');
+
+                const move = gameRef.current.move({
+                    from: sourceSquare,
+                    to: targetSquare,
+                    promotion: 'q',
+                });
+
+                if (move === null) {
+                    log('❌ Illegal move!', 'error');
+                    return false;
+                }
+
+                log(`✅ Valid move: ${move.san}`, 'success');
+                const newFen = gameRef.current.fen();
+                log(`📊 New position: ${newFen}`, 'info');
+                setPosition(newFen);
+
+                return true;
+            }, []);
+
+            return React.createElement(Chessboard, {
+                position: position,
+                onPieceDrop: onDrop,
+                boardOrientation: 'white'
+            });
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('board'));
+        root.render(React.createElement(TestChess));
+
+        log('🚀 Test page loaded successfully!', 'success');
+    </script>
+</body>
+
+</html>
