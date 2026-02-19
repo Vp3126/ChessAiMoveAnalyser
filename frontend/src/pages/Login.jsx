@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
 
+const API_BASE = (import.meta?.env?.VITE_BACKEND_URL || '').trim();
+
 function Login({ onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -15,7 +17,9 @@ function Login({ onLogin }) {
         setLoading(true);
         setError('');
         try {
-            const res = await axios.post('/api/auth/login', { email, password });
+            const base = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+            const url = base ? `${base}/api/auth/login` : '/api/auth/login';
+            const res = await axios.post(url, { email, password });
             onLogin(res.data);
             navigate('/game');
         } catch (err) {
