@@ -9,6 +9,8 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 const PIECE_NAMES = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' };
 
+const BACKEND_URL = (import.meta?.env?.VITE_BACKEND_URL || '').trim();
+
 function getEvalDescription(score) {
     if (Math.abs(score) < 0.2) return 'Position is equal';
     if (score >= 3) return 'White is winning';
@@ -57,7 +59,10 @@ function GameRoom() {
     const gameIdRef = useRef(null);
 
     useEffect(() => {
-        socketRef.current = io('http://localhost:5000');
+        const baseUrl = BACKEND_URL || 'http://localhost:5000';
+        socketRef.current = io(baseUrl, {
+            transports: ['websocket', 'polling']
+        });
         socketRef.current.on('connect', () => setIsConnected(true));
         socketRef.current.on('analysis', (data) => {
             if (!data.analysis) return;
@@ -100,7 +105,12 @@ function GameRoom() {
                     if (user?.token) {
                         if (!gameId) {
                             try {
-                                const res = await axios.post('/api/games', {}, { headers: { Authorization: `Bearer ${user.token}` } });
+                                const baseURL = BACKEND_URL || undefined; // use Vite proxy in dev
+                                const res = await axios.post(
+                                    `${baseURL ? baseURL : ''}/api/games`,
+                                    {},
+                                    { headers: { Authorization: `Bearer ${user.token}` } }
+                                );
                                 gameId = res.data._id;
                                 gameIdRef.current = gameId;
                             } catch (e) {
