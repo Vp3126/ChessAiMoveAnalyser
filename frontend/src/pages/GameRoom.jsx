@@ -9,6 +9,15 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 const PIECE_NAMES = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' };
 
+function getEvalDescription(score) {
+    if (Math.abs(score) < 0.2) return 'Position is equal';
+    if (score >= 3) return 'White is winning';
+    if (score >= 1) return 'White is better';
+    if (score <= -3) return 'Black is winning';
+    if (score <= -1) return 'Black is better';
+    return score > 0 ? 'White slightly better' : 'Black slightly better';
+}
+
 /** Convert engine UCI to SAN and get a short explanation for the move */
 function getMoveDisplay(fen, uci) {
     if (!uci || typeof uci !== 'string' || uci.length < 4) return { san: uci || '', explanation: '' };
@@ -154,9 +163,14 @@ function GameRoom() {
                             <Activity className="text-indigo-400" size={24} />
                             <div>
                                 <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-widest text-left">Evaluation</h3>
-                                <div className="flex items-baseline gap-2">
-                                    <span className={`text-2xl font-mono font-black ${evalScore >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                        {evalScore > 0 ? '+' : ''}{evalScore.toFixed(2)}
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className={`text-2xl font-mono font-black ${evalScore >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                            {evalScore > 0 ? '+' : ''}{evalScore.toFixed(2)}
+                                        </span>
+                                    </div>
+                                    <span className="text-[11px] font-medium text-slate-400">
+                                        {getEvalDescription(evalScore)}
                                     </span>
                                 </div>
                             </div>
@@ -180,12 +194,33 @@ function GameRoom() {
                         <Zap className="text-indigo-400" size={16} fill="currentColor" />
                         <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Analysis</h2>
                     </div>
+                    <div className="absolute top-4 right-4">
+                        {(() => {
+                            const turn = gameRef.current?.turn?.() || 'w';
+                            const isWhite = turn === 'w';
+                            return (
+                                <span
+                                    className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.18em] border ${
+                                        isWhite
+                                            ? 'bg-emerald-500/10 border-emerald-400/60 text-emerald-300'
+                                            : 'bg-sky-500/10 border-sky-400/60 text-sky-300'
+                                    }`}
+                                >
+                                    {isWhite ? 'AI for White move' : 'AI for Black move'}
+                                </span>
+                            );
+                        })()}
+                    </div>
 
                     {analysis ? (() => {
                         const moveDisplay = getMoveDisplay(position || START_FEN, analysis.bestMove);
+                        const turn = gameRef.current?.turn?.() || 'w';
+                        const isWhite = turn === 'w';
                         return (
                         <div className="text-center space-y-2">
-                            <div className="text-7xl font-black text-white uppercase tracking-tighter drop-shadow-2xl">
+                            <div className={`text-7xl font-black uppercase tracking-tighter drop-shadow-2xl ${
+                                isWhite ? 'text-emerald-100' : 'text-sky-100'
+                            }`}>
                                 {moveDisplay.san}
                             </div>
                             {moveDisplay.explanation && (
@@ -193,6 +228,10 @@ function GameRoom() {
                                     {moveDisplay.explanation}
                                 </p>
                             )}
+                            <p className="text-xs text-slate-500">
+                                {isWhite ? 'White to move · ' : 'Black to move · '}
+                                {getEvalDescription(evalScore)}
+                            </p>
                             <div className="text-[10px] font-bold text-indigo-400 tracking-widest uppercase">
                                 DEPTH: {analysis.depth}
                             </div>
