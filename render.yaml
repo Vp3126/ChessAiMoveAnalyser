@@ -1,0 +1,27 @@
+services:
+  # Backend: Node/Express + Socket.io API
+  - type: web
+    name: chess-ai-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      # The following MUST be set from the Render dashboard (Environment tab)
+      # - key: MONGODB_URI
+      #   value: your_mongodb_connection_string
+      # - key: JWT_SECRET
+      #   value: your_jwt_secret
+      # - key: ENGINE_PATH
+      #   value: /opt/render/project/src/engine-cpp/engine
+
+  # Frontend: React + Vite as a static site
+  - type: web
+    name: chess-ai-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+
