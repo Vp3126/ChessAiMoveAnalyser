@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { User, Trash2, UserPlus, Shield, Mail, Calendar } from 'lucide-react';
 
+const API_BASE = (import.meta?.env?.VITE_BACKEND_URL || '').trim();
+
 function AdminPanel() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -11,12 +13,15 @@ function AdminPanel() {
     const fetchUsers = async () => {
         try {
             const authUser = JSON.parse(localStorage.getItem('user'));
-            const res = await axios.get('/api/admin/users', {
-                headers: { Authorization: `Bearer ${authUser.token}` }
+            const base = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+            const url = base ? `${base}/api/admin/users` : '/api/admin/users';
+            const res = await axios.get(url, {
+                headers: { Authorization: `Bearer ${authUser?.token}` }
             });
-            setUsers(res.data);
+            setUsers(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error('Failed to fetch users', err);
+            setUsers([]);
         } finally {
             setLoading(false);
         }
@@ -30,8 +35,10 @@ function AdminPanel() {
         if (!window.confirm('Are you sure you want to delete this user?')) return;
         try {
             const authUser = JSON.parse(localStorage.getItem('user'));
-            await axios.delete(`/api/admin/users/${id}`, {
-                headers: { Authorization: `Bearer ${authUser.token}` }
+            const base = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+            const url = base ? `${base}/api/admin/users/${id}` : `/api/admin/users/${id}`;
+            await axios.delete(url, {
+                headers: { Authorization: `Bearer ${authUser?.token}` }
             });
             setUsers(users.filter(u => u._id !== id));
         } catch (err) {
@@ -43,8 +50,10 @@ function AdminPanel() {
         e.preventDefault();
         try {
             const authUser = JSON.parse(localStorage.getItem('user'));
-            await axios.post('/api/admin/users', newUser, {
-                headers: { Authorization: `Bearer ${authUser.token}` }
+            const base = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+            const url = base ? `${base}/api/admin/users` : '/api/admin/users';
+            await axios.post(url, newUser, {
+                headers: { Authorization: `Bearer ${authUser?.token}` }
             });
             setShowAddModal(false);
             setNewUser({ username: '', email: '', password: '', role: 'user' });
@@ -82,7 +91,7 @@ function AdminPanel() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                        {users.map((user) => (
+                        {(users || []).map((user) => (
                             <tr key={user._id} className="hover:bg-white/5 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
