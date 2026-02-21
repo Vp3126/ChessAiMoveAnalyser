@@ -14,6 +14,24 @@ AnalysisResult Engine::analyze(const Board& board, int depth) {
     result.bestMove = Move();
     result.evaluation = (board.getTurn() == WHITE) ? -INF : INF;
 
+    if (moves.empty()) {
+        if (MoveGenerator::isInCheck(board))
+            result.evaluation = (board.getTurn() == WHITE) ? -INF : INF;
+        else
+            result.evaluation = 0;
+        return result;
+    }
+
+    auto movePriority = [&board](const Move& m) {
+        int p = 0;
+        if (board.getPiece(m.to).type != EMPTY) p += 2;
+        if (m.promotion != EMPTY) p += 1;
+        return p;
+    };
+    std::sort(moves.begin(), moves.end(), [&board, &movePriority](const Move& a, const Move& b) {
+        return movePriority(a) > movePriority(b);
+    });
+
     std::vector<std::pair<Move, double>> scoredMoves;
 
     for (const auto& move : moves) {
@@ -54,8 +72,9 @@ double Engine::minimax(Board& board, int depth, double alpha, double beta, bool 
 
     auto moves = MoveGenerator::generateLegalMoves(board);
     if (moves.empty()) {
-        // Simple checkmate/stalemate detection (for simplicity, just evaluate)
-        return evaluate(board);
+        if (MoveGenerator::isInCheck(board))
+            return maximizingPlayer ? -INF : INF;
+        return 0;
     }
 
     if (maximizingPlayer) {

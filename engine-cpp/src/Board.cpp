@@ -49,17 +49,19 @@ void Board::parseFEN(const std::string& fen) {
         } else if (isdigit(ch)) {
             c += (ch - '0');
         } else {
-            Square sq = (Square)(r * 8 + c);
-            Color color = isupper(ch) ? WHITE : BLACK;
-            char lower = tolower(ch);
-            PieceType type = EMPTY;
-            if (lower == 'p') type = PAWN;
-            else if (lower == 'n') type = KNIGHT;
-            else if (lower == 'b') type = BISHOP;
-            else if (lower == 'r') type = ROOK;
-            else if (lower == 'q') type = QUEEN;
-            else if (lower == 'k') type = KING;
-            squares[sq] = Piece(type, color);
+            if (c < 8 && r >= 0) {
+                Square sq = (Square)(r * 8 + c);
+                Color color = isupper(ch) ? WHITE : BLACK;
+                char lower = tolower(ch);
+                PieceType type = EMPTY;
+                if (lower == 'p') type = PAWN;
+                else if (lower == 'n') type = KNIGHT;
+                else if (lower == 'b') type = BISHOP;
+                else if (lower == 'r') type = ROOK;
+                else if (lower == 'q') type = QUEEN;
+                else if (lower == 'k') type = KING;
+                squares[sq] = Piece(type, color);
+            }
             c++;
         }
     }
@@ -133,11 +135,26 @@ std::string Board::toFEN() const {
 
 void Board::makeMove(const Move& move) {
     Piece p = squares[move.from];
-    
-    // Handle En Passant capture
+    Piece captured(EMPTY, NONE);
+
+    // Capture: record before overwriting (for castling rights and half-move clock)
     if (p.type == PAWN && move.to == enPassantSquare) {
         int capSq = (turn == WHITE) ? (move.to - 8) : (move.to + 8);
+        captured = squares[capSq];
         squares[capSq] = Piece(EMPTY, NONE);
+    } else {
+        captured = squares[move.to];
+    }
+
+    // Revoke castling when a rook is captured on its starting square
+    if (captured.type == ROOK) {
+        if (captured.color == WHITE) {
+            if (move.to == A1) canCastleWQ = false;
+            if (move.to == H1) canCastleWK = false;
+        } else {
+            if (move.to == A8) canCastleBQ = false;
+            if (move.to == H8) canCastleBK = false;
+        }
     }
 
     // Handle Castling
@@ -163,7 +180,7 @@ void Board::makeMove(const Move& move) {
         }
     }
 
-    // Update Castling Rights for Rook moves
+    // Update Castling Rights for Rook moves (moving from corner)
     if (move.from == A1) canCastleWQ = false;
     if (move.from == H1) canCastleWK = false;
     if (move.from == A8) canCastleBQ = false;
@@ -184,9 +201,11 @@ void Board::makeMove(const Move& move) {
         enPassantSquare = (Square)((move.from + move.to) / 2);
     }
 
-    // Update clock and turn
-    if (p.type == PAWN || squares[move.to].type != EMPTY) halfMoveClock = 0;
-    else halfMoveClock++;
+    // Half-move clock: reset on pawn move or capture, else increment (50-move rule)
+    if (p.type == PAWN || captured.type != EMPTY)
+        halfMoveClock = 0;
+    else
+        halfMoveClock++;
 
     if (turn == BLACK) fullMoveNumber++;
     turn = (turn == WHITE) ? BLACK : WHITE;

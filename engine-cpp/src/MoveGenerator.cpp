@@ -85,19 +85,23 @@ void MoveGenerator::generatePseudoLegalMoves(const Board& board, std::vector<Mov
                     }
                 }
             }
-            // Castling (simplified: check if squares empty and not attacked)
+            // Castling: squares empty, king not in check, and no square the king crosses or lands on is attacked
             if (us == WHITE) {
-                if (board.canCastleWK && board.getPiece(F1).type == EMPTY && board.getPiece(G1).type == EMPTY) {
+                if (board.canCastleWK && board.getPiece(F1).type == EMPTY && board.getPiece(G1).type == EMPTY
+                    && !isSquareAttacked(board, E1, them) && !isSquareAttacked(board, F1, them) && !isSquareAttacked(board, G1, them)) {
                     moves.push_back(Move(E1, G1));
                 }
-                if (board.canCastleWQ && board.getPiece(D1).type == EMPTY && board.getPiece(C1).type == EMPTY && board.getPiece(B1).type == EMPTY) {
+                if (board.canCastleWQ && board.getPiece(D1).type == EMPTY && board.getPiece(C1).type == EMPTY && board.getPiece(B1).type == EMPTY
+                    && !isSquareAttacked(board, E1, them) && !isSquareAttacked(board, D1, them) && !isSquareAttacked(board, C1, them)) {
                     moves.push_back(Move(E1, C1));
                 }
             } else {
-                if (board.canCastleBK && board.getPiece(F8).type == EMPTY && board.getPiece(G8).type == EMPTY) {
+                if (board.canCastleBK && board.getPiece(F8).type == EMPTY && board.getPiece(G8).type == EMPTY
+                    && !isSquareAttacked(board, E8, them) && !isSquareAttacked(board, F8, them) && !isSquareAttacked(board, G8, them)) {
                     moves.push_back(Move(E8, G8));
                 }
-                if (board.canCastleBQ && board.getPiece(D8).type == EMPTY && board.getPiece(C8).type == EMPTY && board.getPiece(B8).type == EMPTY) {
+                if (board.canCastleBQ && board.getPiece(D8).type == EMPTY && board.getPiece(C8).type == EMPTY && board.getPiece(B8).type == EMPTY
+                    && !isSquareAttacked(board, E8, them) && !isSquareAttacked(board, D8, them) && !isSquareAttacked(board, C8, them)) {
                     moves.push_back(Move(E8, C8));
                 }
             }
@@ -204,26 +208,37 @@ bool MoveGenerator::isSquareAttacked(const Board& board, Square sq, Color attack
     return false;
 }
 
-// Dummy board update for move legality check
-Board makeMove(Board board, Move move) {
-    Piece p = board.getPiece(move.from);
-    // Simple move update (not full chess rules like castling/enpassant/promotion for legality check)
-    // Actually, we need FEN-like update to be sure.
-    // However, for check legality, just moving the piece is enough.
-    // Note: This is an internal helper.
-    // ... (logic to update board)
-    return board; // simplified
+Square MoveGenerator::getKingSquare(const Board& board, Color color) {
+    for (int i = 0; i < 64; ++i) {
+        Piece p = board.getPiece((Square)i);
+        if (p.type == KING && p.color == color) return (Square)i;
+    }
+    return SQ_NONE;
 }
 
-// For now, let's keep it very simple or the C++ logic will be too long.
-// I'll implement a basic makeMove in Board if needed, but let's see.
+bool MoveGenerator::isInCheck(const Board& board) {
+    Color us = board.getTurn();
+    Color them = (us == WHITE) ? BLACK : WHITE;
+    Square kingSq = getKingSquare(board, us);
+    return (kingSq != SQ_NONE && isSquareAttacked(board, kingSq, them));
+}
 
 std::vector<Move> MoveGenerator::generateLegalMoves(const Board& board) {
     std::vector<Move> pseudo;
     generatePseudoLegalMoves(board, pseudo);
-    // TODO: Filter only legal moves (king not in check after move)
-    // For simplicity in this complex request, I'll return pseudo but I'll add a check.
-    return pseudo;
+    std::vector<Move> legal;
+    legal.reserve(pseudo.size());
+    Color us = board.getTurn();
+    for (const Move& move : pseudo) {
+        Board copy = board;
+        copy.makeMove(move);
+        // After makeMove, turn switched to opponent. King we must not be in check is the one that just moved.
+        Color movedSide = (copy.getTurn() == WHITE) ? BLACK : WHITE;
+        Square kingSq = getKingSquare(copy, movedSide);
+        if (kingSq != SQ_NONE && !isSquareAttacked(copy, kingSq, copy.getTurn()))
+            legal.push_back(move);
+    }
+    return legal;
 }
 
 }
