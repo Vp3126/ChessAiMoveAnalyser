@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { User, Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 
+const API_BASE = (import.meta?.env?.VITE_BACKEND_URL || '').trim();
+
 function Signup() {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
@@ -16,7 +18,13 @@ function Signup() {
         setLoading(true);
         setError('');
         try {
-            await axios.post('/api/auth/signup', { username, email, password });
+            const base = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+            const url = base ? `${base}/api/auth/signup` : '/api/auth/signup';
+            await axios.post(
+                url,
+                { username, email, password },
+                { headers: { 'Content-Type': 'application/json' } }
+            );
             navigate('/login');
         } catch (err) {
             setError(err.response?.data?.error || 'Signup failed. Please try again.');
